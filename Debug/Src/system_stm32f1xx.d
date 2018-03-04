@@ -19,6 +19,7 @@ Src/system_stm32f1xx.o: ../Src/system_stm32f1xx.c \
  /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h \
+ /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_i2c.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h \
@@ -64,6 +65,8 @@ Src/system_stm32f1xx.o: ../Src/system_stm32f1xx.c \
 /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h:
 
 /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h:
+
+/Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_i2c.h:
 
 /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h:
 
