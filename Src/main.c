@@ -146,8 +146,8 @@ int main(void)
 	mavlink_message_t msg;
 	mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR, MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0, MAV_STATE_STANDBY);
 	uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-	HAL_UART_Transmit(&huart2, buffer, len, 0xff);
-	HAL_Delay(500);
+	HAL_UART_Transmit_DMA(&huart2, buffer, len);
+	HAL_Delay(1000);
 
   }
   /* USER CODE END 3 */

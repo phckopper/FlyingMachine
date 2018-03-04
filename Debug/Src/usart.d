@@ -26,7 +26,8 @@ Src/usart.o: ../Src/usart.c \
  /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
- /Users/phckopper/Projects/TC-2018/DroneV2/Inc/gpio.h
+ /Users/phckopper/Projects/TC-2018/DroneV2/Inc/gpio.h \
+ /Users/phckopper/Projects/TC-2018/DroneV2/Inc/dma.h
 
 /Users/phckopper/Projects/TC-2018/DroneV2/Inc/usart.h:
 
@@ -83,3 +84,5 @@ Src/usart.o: ../Src/usart.c \
 /Users/phckopper/Projects/TC-2018/DroneV2/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h:
 
 /Users/phckopper/Projects/TC-2018/DroneV2/Inc/gpio.h:
+
+/Users/phckopper/Projects/TC-2018/DroneV2/Inc/dma.h:
