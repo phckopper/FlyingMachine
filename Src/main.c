@@ -76,7 +76,7 @@ volatile float r_x = 0, r_y = 0, r_z = 0;
 volatile uint8_t mav_byte = 0;
 volatile mavlink_status_t status;
 volatile mavlink_message_t msg;
-volatile int16_t roll = 0, pitch = 0, yaw = 0;
+volatile int16_t roll = 0, pitch = 0, yaw = 0, throttle = 0;
 _Bool new_msg = true;
 /* USER CODE END 0 */
 
@@ -128,9 +128,9 @@ int main(void)
   MPU9250_Init();
   MPU9250_ReadDataDMA();
 
-  rate_pitch_PID.KP = 1;
-  rate_roll_PID.KP = 1;
-  rate_yaw_PID.KP = 1;
+  rate_pitch_PID.KP = 0.5f;
+  rate_roll_PID.KP = 0.5f;
+  rate_yaw_PID.KP = 0.5f;
 
   uint32_t last_heartbeat = 0;
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
@@ -170,6 +170,7 @@ int main(void)
 			mavlink_msg_manual_control_decode(&msg, &controls);
 			pitch = controls.x;
 			roll = controls.y;
+			throttle = controls.z;
 			yaw = controls.r;
 		}
 		}
@@ -257,12 +258,12 @@ float update_pid(PID *m_pid, float setpoint, float measurement) {
 void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
 	if(htim->Instance == TIM4) {
 		// runs every ARR (5000) microseconds
-		float ay = atan2(MPU9250.acc.x,
+		/*float ay = atan2(MPU9250.acc.x,
 				sqrt(pow(MPU9250.acc.y, 2) + pow(MPU9250.acc.z, 2)))
 				* 180/ M_PI;
 		float ax = atan2(MPU9250.acc.y,
 				sqrt(pow(MPU9250.acc.x, 2) + pow(MPU9250.acc.z, 2)))
-				* 180/ M_PI;
+				* 180/ M_PI;*/
 
 		// angles based on gyro (deg/s)
 		r_x = r_x + MPU9250.gyro.x / 200.0f;
@@ -272,17 +273,17 @@ void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
 		// complementary filter
 		// tau = DT*(A)/(1-A)
 		// = 0.48sec
-		r_x = r_x * 0.9f + ax * 0.1f;
-		r_y = r_y * 0.9f + ay * 0.1f;
+		//r_x = r_x * 0.9f + ax * 0.1f;
+		//r_y = r_y * 0.9f + ay * 0.1f;
 
 		float error_pitch = update_pid(&rate_pitch_PID, pitch, MPU9250.gyro.x);
 		float error_roll = update_pid(&rate_roll_PID, roll, MPU9250.gyro.y);
 		float error_yaw = update_pid(&rate_yaw_PID, yaw, MPU9250.gyro.z);
 
-		float m1_out = 0 + error_pitch - error_roll - error_yaw;
-		float m2_out = 0 + error_pitch + error_roll + error_yaw;
-		float m3_out = 0 - error_pitch + error_roll - error_yaw;
-		float m4_out = 0 - error_pitch - error_roll + error_yaw;
+		float m1_out = throttle - error_pitch - error_roll + error_yaw;
+		float m2_out = throttle - error_pitch + error_roll - error_yaw;
+		float m3_out = throttle + error_pitch + error_roll + error_yaw;
+		float m4_out = throttle + error_pitch - error_roll - error_yaw;
 
 		m1_out = constrain(m1_out, 0, htim1.Instance->ARR);
 		m2_out = constrain(m2_out, 0, htim1.Instance->ARR);
