@@ -318,7 +318,6 @@ void writeReg(uint8_t reg, uint8_t value) {
 	//nrf_drv_twi_tx(&m_twi, SELECTED_ADDRESS, w2_data, 2, false);
 	uint32_t s = HAL_I2C_Mem_Write(&hi2c2, SELECTED_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, &value,
 						1, HAL_MAX_DELAY);
-	HAL_Delay(1);
 	if(s == HAL_BUSY) {
 		while(1) {
 		//HAL_I2C_ClearBusyFlagErrata_2_14_7(&hi2c2);
@@ -337,7 +336,6 @@ void writeReg16Bit(uint8_t reg, uint16_t value) {
 	//nrf_drv_twi_tx(&m_twi, SELECTED_ADDRESS, w2_data, sizeof(w2_data), false);
 	HAL_I2C_Mem_Write(&hi2c2, SELECTED_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, w2_data,
 						sizeof(w2_data), 0xff);
-	HAL_Delay(1);
 }
 
 // Write a 32-bit register
@@ -351,7 +349,6 @@ void writeReg32Bit(uint8_t reg, uint32_t value) {
 	//nrf_drv_twi_tx(&m_twi, SELECTED_ADDRESS, w2_data, sizeof(w2_data), false);
 	HAL_I2C_Mem_Write(&hi2c2, SELECTED_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, w2_data,
 					sizeof(w2_data), 0xff);
-	HAL_Delay(1);
 }
 
 // Read an 8-bit register
@@ -364,7 +361,6 @@ uint8_t readReg(uint8_t reg) {
 
 	HAL_I2C_Mem_Read(&hi2c2, SELECTED_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT,
 			&value, 1, 0xff);
-	HAL_Delay(1);
 	return value;
 }
 
@@ -382,7 +378,6 @@ uint16_t readReg16Bit(uint8_t reg) {
 	value = (uint16_t) buf[0] << 8;
 	value |= buf[1];
 
-	HAL_Delay(1);
 	return value;
 }
 
@@ -402,7 +397,6 @@ uint32_t readReg32Bit(uint8_t reg) {
 	value |= (uint16_t) buf[2] << 8;
 	value |= buf[3];
 
-	HAL_Delay(1);
 	return value;
 }
 
@@ -413,8 +407,6 @@ void writeMulti(uint8_t reg, uint8_t const * src, uint8_t count) {
 	//nrf_drv_twi_tx(&m_twi, SELECTED_ADDRESS, src, count, false);
 	HAL_I2C_Mem_Write(&hi2c2, SELECTED_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, src,
 				count, 0xff);
-
-	HAL_Delay(1);
 }
 
 // Read an arbitrary number of bytes from the sensor, starting at the given
@@ -424,8 +416,6 @@ void readMulti(uint8_t reg, uint8_t * dst, uint8_t count) {
 	//nrf_drv_twi_rx(&m_twi, SELECTED_ADDRESS, dst, count);
 	HAL_I2C_Mem_Read(&hi2c2, SELECTED_ADDRESS, reg, I2C_MEMADD_SIZE_8BIT, dst,
 			count, 0xff);
-
-	HAL_Delay(1);
 }
 
 // Set the return signal rate limit check value in units of MCPS (mega counts

@@ -47,6 +47,7 @@
 
 /* USER CODE BEGIN Includes */
 #include <math.h>
+#include "vl53l0x.h"
 #include "MPU9250.h"
 /* USER CODE END Includes */
 
