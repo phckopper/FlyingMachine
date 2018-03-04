@@ -39,6 +39,7 @@
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "dma.h"
+#include "i2c.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -102,6 +103,7 @@ int main(void)
   MX_SPI1_Init();
   MX_USART2_UART_Init();
   MX_TIM1_Init();
+  MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
@@ -112,6 +114,8 @@ int main(void)
 
   MPU9250_Init();
   MPU9250_ReadDataDMA();
+
+  distance_sensors_init();
 
   float r_x = 0, r_y = 0, r_z = 0;
   uint16_t i = 0;
@@ -145,7 +149,9 @@ int main(void)
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
 	if(i > 50) {
 		char buffer[255];
-		sprintf(buffer, "%d %d %d\r\n", (int) r_x, (int) r_y, (int) r_z);
+		uint16_t height = read_height();
+	    uint16_t front = read_front();
+		sprintf(buffer, "%d %d %d %d %d\r\n", (int) r_x, (int) r_y, (int) r_z, height, front);
 		HAL_UART_Transmit(&huart2, (uint8_t *) buffer, strlen(buffer), 0xff);
 		i = 0;
 	} else {
