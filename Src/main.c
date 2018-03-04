@@ -73,6 +73,11 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN 0 */
 volatile float r_x = 0, r_y = 0, r_z = 0;
+volatile uint8_t mav_byte = 0;
+volatile mavlink_status_t status;
+volatile mavlink_message_t msg;
+volatile int16_t roll = 0, pitch = 0, yaw = 0;
+_Bool new_msg = true;
 /* USER CODE END 0 */
 
 /**
@@ -126,6 +131,10 @@ int main(void)
   rate_pitch_PID.KP = 1;
   rate_roll_PID.KP = 1;
   rate_yaw_PID.KP = 1;
+
+  uint32_t last_heartbeat = 0;
+	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+	HAL_UART_Receive_DMA(&huart2, &mav_byte, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -141,13 +150,30 @@ int main(void)
 	uint16_t front = read_front();
 	sprintf(buffer, "%d %d %d %d %d\r\n", (int) r_x, (int) r_y, (int) r_z, height, front);
 	HAL_UART_Transmit(&huart2, (uint8_t *) buffer, strlen(buffer), 0xff);*/
-
-	uint8_t buffer[255];
-	mavlink_message_t msg;
-	mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR, MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0, MAV_STATE_STANDBY);
-	uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-	HAL_UART_Transmit_DMA(&huart2, buffer, len);
-	HAL_Delay(1000);
+	if(HAL_GetTick() - last_heartbeat > 1000) {
+		uint8_t buffer[255];
+		mavlink_message_t msg;
+		mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR, MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0, MAV_STATE_STANDBY);
+		uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+		HAL_UART_Transmit_DMA(&huart2, buffer, len);
+		last_heartbeat = HAL_GetTick();
+	}
+	if(new_msg) {
+		new_msg = false;
+		switch(msg.msgid) {
+		case MAVLINK_MSG_ID_HEARTBEAT: {
+			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+			break;
+		}
+		case MAVLINK_MSG_ID_MANUAL_CONTROL: {
+			mavlink_manual_control_t controls;
+			mavlink_msg_manual_control_decode(&msg, &controls);
+			pitch = controls.x;
+			roll = controls.y;
+			yaw = controls.r;
+		}
+		}
+	}
 
   }
   /* USER CODE END 3 */
@@ -205,6 +231,10 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback (UART_HandleTypeDef *huart) {
+	if(mavlink_parse_char(0, mav_byte, &msg, &status))
+		new_msg = true;
+}
 float update_pid(PID *m_pid, float setpoint, float measurement) {
     float error = setpoint - measurement;
 
@@ -245,9 +275,9 @@ void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
 		r_x = r_x * 0.9f + ax * 0.1f;
 		r_y = r_y * 0.9f + ay * 0.1f;
 
-		float error_pitch = update_pid(&rate_pitch_PID, 0, MPU9250.gyro.x);
-		float error_roll = update_pid(&rate_roll_PID, 0, MPU9250.gyro.y);
-		float error_yaw = update_pid(&rate_yaw_PID, 0, MPU9250.gyro.z);
+		float error_pitch = update_pid(&rate_pitch_PID, pitch, MPU9250.gyro.x);
+		float error_roll = update_pid(&rate_roll_PID, roll, MPU9250.gyro.y);
+		float error_yaw = update_pid(&rate_yaw_PID, yaw, MPU9250.gyro.z);
 
 		float m1_out = 0 + error_pitch - error_roll - error_yaw;
 		float m2_out = 0 + error_pitch + error_roll + error_yaw;
@@ -263,9 +293,6 @@ void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, m2_out);
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, m3_out);
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, m4_out);
-
-
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
 	}
 }
 /* USER CODE END 4 */
