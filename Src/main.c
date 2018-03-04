@@ -50,6 +50,8 @@
 #include <math.h>
 #include "vl53l0x.h"
 #include "MPU9250.h"
+#include "mavlink/standard/mavlink.h"
+#include "mavlink/mavlink_helpers.h"
 
 #define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 /* USER CODE END Includes */
@@ -134,12 +136,18 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	char buffer[255];
+	/*char buffer[255];
 	uint16_t height = read_height();
 	uint16_t front = read_front();
 	sprintf(buffer, "%d %d %d %d %d\r\n", (int) r_x, (int) r_y, (int) r_z, height, front);
-	HAL_UART_Transmit(&huart2, (uint8_t *) buffer, strlen(buffer), 0xff);
-	HAL_Delay(50);
+	HAL_UART_Transmit(&huart2, (uint8_t *) buffer, strlen(buffer), 0xff);*/
+
+	uint8_t buffer[255];
+	mavlink_message_t msg;
+	mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR, MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0, MAV_STATE_STANDBY);
+	uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+	HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+	HAL_Delay(500);
 
   }
   /* USER CODE END 3 */
