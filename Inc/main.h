@@ -64,6 +64,16 @@
 /* #define USE_FULL_ASSERT    1U */
 
 /* USER CODE BEGIN Private defines */
+typedef struct {
+	float KP, KI, KD;
+	float _I;
+	float _D;
+	float I_MAX;
+} PID;
+
+PID angle_roll_PID, angle_pitch_PID, angle_yaw_PID;
+PID rate_roll_PID, rate_pitch_PID, rate_yaw_PID;
+PID altitude_PID;
 
 /* USER CODE END Private defines */
 

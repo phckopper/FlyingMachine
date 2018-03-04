@@ -46,9 +46,12 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
+#include <string.h>
 #include <math.h>
 #include "vl53l0x.h"
 #include "MPU9250.h"
+
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -117,6 +120,10 @@ int main(void)
 
   MPU9250_Init();
   MPU9250_ReadDataDMA();
+
+  rate_pitch_PID.KP = 1;
+  rate_roll_PID.KP = 1;
+  rate_yaw_PID.KP = 1;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -190,6 +197,25 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+float update_pid(PID *m_pid, float setpoint, float measurement) {
+    float error = setpoint - measurement;
+
+    float P = error * m_pid->KP;
+
+    m_pid->_I += error;
+    float I = m_pid->_I * m_pid->KI;
+
+    if(m_pid->_I > m_pid->I_MAX)
+        m_pid->_I = m_pid->I_MAX;
+    if(m_pid->_I < -(m_pid->I_MAX))
+        m_pid->_I = -(m_pid->I_MAX);
+
+    float D = (error - m_pid->_D) * m_pid->KD;
+    m_pid->_D = error;
+
+    return P + I + D;
+}
+
 void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
 	if(htim->Instance == TIM4) {
 		// runs every ARR (5000) microseconds
@@ -210,6 +236,26 @@ void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
 		// = 0.48sec
 		r_x = r_x * 0.9f + ax * 0.1f;
 		r_y = r_y * 0.9f + ay * 0.1f;
+
+		float error_pitch = update_pid(&rate_pitch_PID, 0, MPU9250.gyro.x);
+		float error_roll = update_pid(&rate_roll_PID, 0, MPU9250.gyro.y);
+		float error_yaw = update_pid(&rate_yaw_PID, 0, MPU9250.gyro.z);
+
+		float m1_out = 0 + error_pitch - error_roll - error_yaw;
+		float m2_out = 0 + error_pitch + error_roll + error_yaw;
+		float m3_out = 0 - error_pitch + error_roll - error_yaw;
+		float m4_out = 0 - error_pitch - error_roll + error_yaw;
+
+		m1_out = constrain(m1_out, 0, htim1.Instance->ARR);
+		m2_out = constrain(m2_out, 0, htim1.Instance->ARR);
+		m3_out = constrain(m3_out, 0, htim1.Instance->ARR);
+		m4_out = constrain(m4_out, 0, htim1.Instance->ARR);
+
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, m1_out);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, m2_out);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, m3_out);
+		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, m4_out);
+
 
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
 	}
