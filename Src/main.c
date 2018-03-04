@@ -67,7 +67,7 @@ void SystemClock_Config(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
+volatile float r_x = 0, r_y = 0, r_z = 0;
 /* USER CODE END 0 */
 
 /**
@@ -105,6 +105,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM1_Init();
   MX_I2C2_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
@@ -116,9 +117,6 @@ int main(void)
 
   MPU9250_Init();
   MPU9250_ReadDataDMA();
-
-  float r_x = 0, r_y = 0, r_z = 0;
-  uint16_t i = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -129,35 +127,12 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	float ay = atan2(MPU9250.acc.x,
-			sqrt(pow(MPU9250.acc.y, 2) + pow(MPU9250.acc.z, 2)))
-			* 180/ M_PI;
-	float ax = atan2(MPU9250.acc.y,
-			sqrt(pow(MPU9250.acc.x, 2) + pow(MPU9250.acc.z, 2)))
-			* 180/ M_PI;
-
-	// angles based on gyro (deg/s)
-	r_x = r_x + MPU9250.gyro.x / 100.0f;
-	r_y = r_y - MPU9250.gyro.y / 100.0f;
-	r_z = r_z + MPU9250.gyro.z / 100.0f;
-
-	// complementary filter
-	// tau = DT*(A)/(1-A)
-	// = 0.48sec
-	r_x = r_x * 0.9f + ax * 0.1f;
-	r_y = r_y * 0.9f + ay * 0.1f;
-	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
-	if(i > 10) {
-		char buffer[255];
-		uint16_t height = read_height();
-	    uint16_t front = read_front();
-		sprintf(buffer, "%d %d %d %d %d\r\n", (int) r_x, (int) r_y, (int) r_z, height, front);
-		HAL_UART_Transmit(&huart2, (uint8_t *) buffer, strlen(buffer), 0xff);
-		i = 0;
-	} else {
-		i++;
-	}
-	HAL_Delay(10);
+	char buffer[255];
+	uint16_t height = read_height();
+	uint16_t front = read_front();
+	sprintf(buffer, "%d %d %d %d %d\r\n", (int) r_x, (int) r_y, (int) r_z, height, front);
+	HAL_UART_Transmit(&huart2, (uint8_t *) buffer, strlen(buffer), 0xff);
+	HAL_Delay(50);
 
   }
   /* USER CODE END 3 */
@@ -215,7 +190,30 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
+	if(htim->Instance == TIM4) {
+		// runs every ARR (5000) microseconds
+		float ay = atan2(MPU9250.acc.x,
+				sqrt(pow(MPU9250.acc.y, 2) + pow(MPU9250.acc.z, 2)))
+				* 180/ M_PI;
+		float ax = atan2(MPU9250.acc.y,
+				sqrt(pow(MPU9250.acc.x, 2) + pow(MPU9250.acc.z, 2)))
+				* 180/ M_PI;
 
+		// angles based on gyro (deg/s)
+		r_x = r_x + MPU9250.gyro.x / 200.0f;
+		r_y = r_y - MPU9250.gyro.y / 200.0f;
+		r_z = r_z + MPU9250.gyro.z / 200.0f;
+
+		// complementary filter
+		// tau = DT*(A)/(1-A)
+		// = 0.48sec
+		r_x = r_x * 0.9f + ax * 0.1f;
+		r_y = r_y * 0.9f + ay * 0.1f;
+
+		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+	}
+}
 /* USER CODE END 4 */
 
 /**

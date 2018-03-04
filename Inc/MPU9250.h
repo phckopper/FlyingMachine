@@ -49,13 +49,13 @@ enum LpAccelOdr
 
 struct MPU9250_t {
 	struct {
-		float x, y, z;
+		volatile float x, y, z;
 	} acc;
 	struct {
-		float x, y, z;
+		volatile float x, y, z;
 	} gyro;
 	struct {
-		float x, y, z;
+		volatile float x, y, z;
 	} gyro_bias;
 	_Bool _calibrated;
 } MPU9250;
