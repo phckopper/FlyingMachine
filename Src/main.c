@@ -111,11 +111,10 @@ int main(void)
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
 
   HAL_Delay(5000);
+  distance_sensors_init();
 
   MPU9250_Init();
   MPU9250_ReadDataDMA();
-
-  distance_sensors_init();
 
   float r_x = 0, r_y = 0, r_z = 0;
   uint16_t i = 0;
@@ -147,7 +146,7 @@ int main(void)
 	r_x = r_x * 0.9f + ax * 0.1f;
 	r_y = r_y * 0.9f + ay * 0.1f;
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
-	if(i > 50) {
+	if(i > 10) {
 		char buffer[255];
 		uint16_t height = read_height();
 	    uint16_t front = read_front();

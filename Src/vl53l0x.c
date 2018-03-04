@@ -60,7 +60,6 @@ uint16_t read_height(void) {
 }
 
 void distance_sensors_init(void) {
-	printf("oi");
 	//nrf_gpio_cfg_output(18);
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, RESET);
 	// check whether vl53l0x is already initted and on the bus
@@ -72,6 +71,7 @@ void distance_sensors_init(void) {
 
 	//nrf_gpio_cfg_input(18, NRF_GPIO_PIN_NOPULL);
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, SET);
+	HAL_Delay(10);
 	vl53l0x_init(true);
 }
 
@@ -89,13 +89,12 @@ void setAddress(uint8_t new_addr) {
 // mode.
 bool vl53l0x_init(bool io_2v8) {
 	// VL53L0X_DataInit() begin
-	printf("setting 2v8 mode\r\n");
+
 	// sensor uses 1V8 mode for I/O by default; switch to 2V8 mode if necessary
 	if (io_2v8) {
 		writeReg(VHV_CONFIG_PAD_SCL_SDA__EXTSUP_HV,
 				readReg(VHV_CONFIG_PAD_SCL_SDA__EXTSUP_HV) | 0x01); // set bit 0
 	}
-	printf("setting standard mode\r\n");
 	// "Set I2C standard mode"
 	writeReg(0x88, 0x00);
 
