@@ -1567,11 +1567,20 @@ void HAL_UART_IRQHandler(UART_HandleTypeDef *huart)
   if(errorflags == RESET)
   {
     /* UART in mode Receiver -------------------------------------------------*/
-    if(((isrflags & USART_SR_RXNE) != RESET) && ((cr1its & USART_CR1_RXNEIE) != RESET))
-    {
-      UART_Receive_IT(huart);
-      return;
-    }
+	  if ((isrflags & USART_SR_RXNE) != RESET)
+	  {
+		if ((cr1its & USART_CR1_RXNEIE) != RESET)
+		{
+		   UART_Receive_IT(huart);
+		   return;
+		}
+
+		if ((isrflags & USART_SR_IDLE) != RESET)
+		{
+		  /* May also need to read DR to dismiss the IRQ */
+		  HAL_UART_RxIdleCallback(huart);
+		  return;
+	  }
   }
 
   /* If some errors occur */
@@ -1673,6 +1682,21 @@ void HAL_UART_IRQHandler(UART_HandleTypeDef *huart)
     UART_EndTransmit_IT(huart);
     return;
   }
+}
+
+/**
+* @brief  Rx idle callback.
+* @param  huart: Pointer to a UART_HandleTypeDef structure that contains
+*                the configuration information for the specified UART module.
+* @retval None
+*/
+__weak void HAL_UART_RxIdleCallback(UART_HandleTypeDef *huart)
+{
+/* Prevent unused argument(s) compilation warning */
+UNUSED(huart);
+/* NOTE: This function should not be modified, when the callback is needed,
+		 the HAL_UART_RxIdleCallback can be implemented in the user file
+ */
 }
 
 /**
