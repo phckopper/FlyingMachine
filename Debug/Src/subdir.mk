@@ -5,6 +5,7 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../Src/MPU9250.c \
+../Src/PMW3901.c \
 ../Src/dma.c \
 ../Src/gpio.c \
 ../Src/i2c.c \
@@ -19,6 +20,7 @@ C_SRCS += \
 
 OBJS += \
 ./Src/MPU9250.o \
+./Src/PMW3901.o \
 ./Src/dma.o \
 ./Src/gpio.o \
 ./Src/i2c.o \
@@ -33,6 +35,7 @@ OBJS += \
 
 C_DEPS += \
 ./Src/MPU9250.d \
+./Src/PMW3901.d \
 ./Src/dma.d \
 ./Src/gpio.d \
 ./Src/i2c.d \

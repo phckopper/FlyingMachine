@@ -50,6 +50,7 @@
 #include <math.h>
 #include "vl53l0x.h"
 #include "MPU9250.h"
+#include "PMW3901.h"
 #include "mavlink/standard/mavlink.h"
 #include "mavlink/mavlink_helpers.h"
 
@@ -73,6 +74,9 @@ void SystemClock_Config(void);
 
 /* USER CODE BEGIN 0 */
 volatile float r_x = 0, r_y = 0, r_z = 0;
+float pos_x = 0, pos_y = 0, pos_z = 0;
+int16_t distance_front = 0, altitude = 0;
+
 volatile uint8_t mav_byte = 0;
 volatile mavlink_status_t status;
 volatile mavlink_message_t msg;
@@ -116,67 +120,155 @@ int main(void)
   MX_TIM1_Init();
   MX_I2C2_Init();
   MX_TIM4_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+	/*
+	HAL_Delay(1000);
+	char cmd1[] = "+++\r";
+	char response1[2] = {0};
+	HAL_UART_Transmit(&huart2, cmd1, strlen(cmd1), 0xff);
+	HAL_UART_Receive(&huart2, response1, sizeof(response1), 0xff);
+	HAL_UART_Transmit(&huart1, response1, strlen(response1), 0xff);
+	HAL_Delay(1000);
 
-  HAL_Delay(5000);
-  distance_sensors_init();
+	char cmd2[] = "ATS05=75\r";
+	char response2[255] = {0};
+	HAL_UART_Transmit(&huart2, cmd2, strlen(cmd2), 0xff);
+	HAL_UART_Receive(&huart2, response2, sizeof(response2), 0xff);
+	HAL_UART_Transmit(&huart1, response2, strlen(response2), 0xff);
+	HAL_Delay(1000);
 
-  MPU9250_Init();
-  MPU9250_ReadDataDMA();
+	char cmd5[] = "AT/C\r";
+	char response5[255] = {0};
+	HAL_UART_Transmit(&huart2, cmd5, strlen(cmd5), 0xff);
+	HAL_UART_Receive(&huart2, response5, sizeof(response5), 0xff);
+	HAL_UART_Transmit(&huart1, response5, strlen(response5), 0xff);
+	HAL_Delay(1000);
 
-  rate_pitch_PID.KP = 0.5f;
-  rate_roll_PID.KP = 0.5f;
-  rate_yaw_PID.KP = 0.5f;
+	char cmd4[] = "AT/S\r";
+	char response4[255] = {0};
+	HAL_UART_Transmit(&huart2, cmd4, strlen(cmd4), 0xff);
+	HAL_UART_Receive(&huart2, response4, sizeof(response4), 0xff);
+	HAL_UART_Transmit(&huart1, response4, strlen(response4), 0xff);
+	HAL_Delay(1000);
 
-  uint32_t last_heartbeat = 0;
+	char cmd3[] = "ATO\r";
+	char response3[255] = {0};
+	HAL_UART_Transmit(&huart2, cmd3, strlen(cmd3), 0xff);
+	HAL_UART_Receive(&huart2, response3, sizeof(response3), 0xff);
+	HAL_UART_Transmit(&huart1, response3, strlen(response3), 0xff);
+
+
+	HAL_Delay(1000);
+	while(1) {
+		char buffer[64] = {0};
+		for(uint8_t i = 0; i < 64; i++) {
+			memset(buffer, '.', i);
+			uint8_t d = sprintf(buffer, "%d", i);
+			buffer[i - 2] = '\r';
+			buffer[i - 1] = '\n';
+			HAL_UART_Transmit(&huart2, buffer, i, 0xff);
+			HAL_Delay(20);
+		}
+	}*/
+	HAL_Delay(5000);
+	if (PMW3901_Init() == PMW_BROKEN_CONNECTION) {
+		while (1) {
+			HAL_GPIO_TogglePin(STATUS_GPIO_Port, STATUS_Pin);
+			HAL_Delay(2000);
+		}
+	}
+	distance_sensors_init();
+
+	MPU9250_Init();
+	MPU9250_ReadDataDMA();
+
+	rate_pitch_PID.KP = 2.0f;
+	rate_roll_PID.KP = 2.0f;
+	rate_yaw_PID.KP = 2.0f;
+
+	uint32_t last_heartbeat = 0;
+	uint32_t last_sensors_update = 0;
+	uint32_t last_telemetry_update = 0;
+	uint32_t last_distance_update = 0;
+	uint32_t WAIT_TIME = 30;
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
 	HAL_UART_Receive_DMA(&huart2, &mav_byte, 1);
+	_Bool wait = false;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+	while (1) {
 
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	/*char buffer[255];
-	uint16_t height = read_height();
-	uint16_t front = read_front();
-	sprintf(buffer, "%d %d %d %d %d\r\n", (int) r_x, (int) r_y, (int) r_z, height, front);
-	HAL_UART_Transmit(&huart2, (uint8_t *) buffer, strlen(buffer), 0xff);*/
-	if(HAL_GetTick() - last_heartbeat > 1000) {
-		uint8_t buffer[255];
-		mavlink_message_t msg;
-		mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR, MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0, MAV_STATE_STANDBY);
-		uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-		HAL_UART_Transmit_DMA(&huart2, buffer, len);
-		last_heartbeat = HAL_GetTick();
-	}
-	if(new_msg) {
-		new_msg = false;
-		switch(msg.msgid) {
-		case MAVLINK_MSG_ID_HEARTBEAT: {
-			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
-			break;
+		if (HAL_GetTick() - last_heartbeat > 1000) {
+			uint8_t buffer[255];
+			mavlink_message_t msg;
+			mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR,
+					MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0,
+					MAV_STATE_STANDBY);
+			uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+			HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+			HAL_Delay(WAIT_TIME);
+			last_heartbeat = HAL_GetTick();
 		}
-		case MAVLINK_MSG_ID_MANUAL_CONTROL: {
-			mavlink_manual_control_t controls;
-			mavlink_msg_manual_control_decode(&msg, &controls);
-			pitch = controls.x;
-			roll = controls.y;
-			throttle = controls.z;
-			yaw = controls.r;
+		if (HAL_GetTick() - last_telemetry_update > 50) {
+			uint8_t buffer[255];
+			mavlink_message_t msg;
+			mavlink_msg_vision_position_estimate_pack(1, 100, &msg,
+				HAL_GetTick(), pos_x, pos_y, altitude, r_y, r_x, r_z);
+			uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+			HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+			HAL_Delay(WAIT_TIME);
+			last_telemetry_update = HAL_GetTick();
 		}
+		if(HAL_GetTick() - last_distance_update > 50) {
+			uint8_t buffer[255];
+			mavlink_msg_distance_sensor_pack(1, 100, &msg, HAL_GetTick(), 30,
+					1500, distance_front, MAV_DISTANCE_SENSOR_LASER, 0,
+					MAV_SENSOR_ROTATION_NONE, 0);
+			uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+			HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+			HAL_Delay(WAIT_TIME);
+			last_distance_update = HAL_GetTick();
 		}
-	}
+		if (HAL_GetTick() - last_sensors_update > 10) {
+			int16_t deltaX, deltaY;
+			uint32_t dt = HAL_GetTick() - last_sensors_update;
+			if (PMW_OK == PMW3901_Read_Motion(&deltaX, &deltaY)) {
+				pos_x += deltaX;
+				pos_y += deltaY;
+			}
+			distance_front = read_front();
+			altitude = read_height();
+			last_sensors_update = HAL_GetTick();
+		}
+		if (new_msg) {
+			new_msg = false;
+			switch (msg.msgid) {
+			case MAVLINK_MSG_ID_HEARTBEAT: {
+				HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+				break;
+			}
+			case MAVLINK_MSG_ID_MANUAL_CONTROL: {
+				mavlink_manual_control_t controls;
+				mavlink_msg_manual_control_decode(&msg, &controls);
+				pitch = controls.x;
+				roll = controls.y;
+				throttle = controls.z;
+				yaw = controls.r;
+			}
+			}
+		}
 
-  }
+	}
   /* USER CODE END 3 */
 
 }
@@ -232,38 +324,44 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback (UART_HandleTypeDef *huart) {
-	if(mavlink_parse_char(0, mav_byte, &msg, &status))
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
+	char buffer[] = "UART Error\r\n";
+	HAL_UART_Transmit(&huart1, (uint8_t *)buffer, sizeof(buffer), 0xff);
+}
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	if (mavlink_parse_char(0, mav_byte, &msg, &status))
 		new_msg = true;
 }
 float update_pid(PID *m_pid, float setpoint, float measurement) {
-    float error = setpoint - measurement;
+	float error = setpoint - measurement;
 
-    float P = error * m_pid->KP;
+	float P = error * m_pid->KP;
 
-    m_pid->_I += error;
-    float I = m_pid->_I * m_pid->KI;
+	m_pid->_I += error;
+	float I = m_pid->_I * m_pid->KI;
 
-    if(m_pid->_I > m_pid->I_MAX)
-        m_pid->_I = m_pid->I_MAX;
-    if(m_pid->_I < -(m_pid->I_MAX))
-        m_pid->_I = -(m_pid->I_MAX);
+	if (m_pid->_I > m_pid->I_MAX)
+		m_pid->_I = m_pid->I_MAX;
+	if (m_pid->_I < -(m_pid->I_MAX))
+		m_pid->_I = -(m_pid->I_MAX);
 
-    float D = (error - m_pid->_D) * m_pid->KD;
-    m_pid->_D = error;
+	float D = (error - m_pid->_D) * m_pid->KD;
+	m_pid->_D = error;
 
-    return P + I + D;
+	return P + I + D;
 }
 
-void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
-	if(htim->Instance == TIM4) {
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	if (htim->Instance == TIM4) {
+		DBG_A_GPIO_Port->ODR |= DBG_A_Pin;
+
 		// runs every ARR (5000) microseconds
-		/*float ay = atan2(MPU9250.acc.x,
+		float ay = atan2(MPU9250.acc.x,
 				sqrt(pow(MPU9250.acc.y, 2) + pow(MPU9250.acc.z, 2)))
 				* 180/ M_PI;
 		float ax = atan2(MPU9250.acc.y,
 				sqrt(pow(MPU9250.acc.x, 2) + pow(MPU9250.acc.z, 2)))
-				* 180/ M_PI;*/
+				* 180/ M_PI;
 
 		// angles based on gyro (deg/s)
 		r_x = r_x + MPU9250.gyro.x / 200.0f;
@@ -273,8 +371,8 @@ void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
 		// complementary filter
 		// tau = DT*(A)/(1-A)
 		// = 0.48sec
-		//r_x = r_x * 0.9f + ax * 0.1f;
-		//r_y = r_y * 0.9f + ay * 0.1f;
+		r_x = r_x * 0.9f + ax * 0.1f;
+		r_y = r_y * 0.9f + ay * 0.1f;
 
 		float error_pitch = update_pid(&rate_pitch_PID, pitch, MPU9250.gyro.x);
 		float error_roll = update_pid(&rate_roll_PID, roll, MPU9250.gyro.y);
@@ -294,6 +392,8 @@ void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, m2_out);
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, m3_out);
 		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, m4_out);
+
+		DBG_A_GPIO_Port->ODR &= ~DBG_A_Pin;
 	}
 }
 /* USER CODE END 4 */
@@ -307,10 +407,9 @@ void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim) {
 void _Error_Handler(char *file, int line)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  while(1)
-  {
-  }
+	/* User can add his own implementation to report the HAL error return state */
+	while (1) {
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -325,8 +424,8 @@ void _Error_Handler(char *file, int line)
 void assert_failed(uint8_t* file, uint32_t line)
 { 
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+	/* User can add his own implementation to report the file name and line number,
+	 tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

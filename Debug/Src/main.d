@@ -34,6 +34,7 @@ Src/main.o: ../Src/main.c \
  /Users/phckopper/Projects/TC-2018/DroneV2/Inc/gpio.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Inc/vl53l0x.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Inc/MPU9250.h \
+ /Users/phckopper/Projects/TC-2018/DroneV2/Inc/PMW3901.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Inc/mavlink/standard/mavlink.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Inc/mavlink/standard/version.h \
  /Users/phckopper/Projects/TC-2018/DroneV2/Inc/mavlink/standard/standard.h \
@@ -252,6 +253,8 @@ Src/main.o: ../Src/main.c \
 /Users/phckopper/Projects/TC-2018/DroneV2/Inc/vl53l0x.h:
 
 /Users/phckopper/Projects/TC-2018/DroneV2/Inc/MPU9250.h:
+
+/Users/phckopper/Projects/TC-2018/DroneV2/Inc/PMW3901.h:
 
 /Users/phckopper/Projects/TC-2018/DroneV2/Inc/mavlink/standard/mavlink.h:
 

@@ -78,6 +78,7 @@ uint8_t MPU9250_Init(void) {
 }
 
 void MPU9250_ReadDataDMA(void) {
+	DBG_B_GPIO_Port->ODR ^= DBG_B_Pin;
 	uint8_t reg = ACCEL_OUT | 0x80;
 
 	HAL_GPIO_WritePin(MPU_CS_GPIO_Port, MPU_CS_Pin, GPIO_PIN_RESET);
