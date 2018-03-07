@@ -184,9 +184,9 @@ int main(void)
 	MPU9250_ReadDataDMA();
 
 	start_mavlink();
-	rate_pitch_PID.KP = 2.0f;
-	rate_roll_PID.KP = 2.0f;
-	rate_yaw_PID.KP = 2.0f;
+	rate_pitch_PID.KP = 3.0f;
+	rate_roll_PID.KP = 3.0f;
+	rate_yaw_PID.KP = 1.0f;
 
 	uint32_t last_heartbeat = 0;
 	uint32_t last_sensors_update = 0;
@@ -205,7 +205,7 @@ int main(void)
 
   /* USER CODE BEGIN 3 */
 		_Bool wait = false;
-		if (HAL_GetTick() - last_heartbeat > 1000) {
+		if (HAL_GetTick() - last_heartbeat > 1000 && __HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
 			if(!wait) {
 				uint8_t buffer[255];
 				mavlink_message_t msg;
@@ -213,26 +213,26 @@ int main(void)
 						MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0,
 						MAV_STATE_STANDBY);
 				uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				HAL_UART_Transmit_DMA(&huart2, buffer, len);
-				HAL_Delay(WAIT_TIME);
+				HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+				//HAL_Delay(WAIT_TIME);
 				last_heartbeat = HAL_GetTick();
 				wait = true;
 			}
 		}
-		if (HAL_GetTick() - last_telemetry_update > 100) {
+		if (HAL_GetTick() - last_telemetry_update > 100 && __HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
 			if(!wait) {
 				uint8_t buffer[255];
 				mavlink_message_t msg;
 				mavlink_msg_vision_position_estimate_pack(1, 100, &msg,
 					HAL_GetTick(), pos_x, pos_y, altitude, r_y, r_x, r_z);
 				uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				HAL_UART_Transmit_DMA(&huart2, buffer, len);
-				HAL_Delay(WAIT_TIME);
+				HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+				//HAL_Delay(WAIT_TIME);
 				last_telemetry_update = HAL_GetTick();
 				wait = true;
 			}
 		}
-		if(HAL_GetTick() - last_distance_update > 100) {
+		if(HAL_GetTick() - last_distance_update > 100 && __HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
 			if(!wait) {
 				uint8_t buffer[255];
 				mavlink_message_t msg;
@@ -240,13 +240,13 @@ int main(void)
 						1500, distance_front, MAV_DISTANCE_SENSOR_LASER, 0,
 						MAV_SENSOR_ROTATION_NONE, 0);
 				uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				HAL_UART_Transmit_DMA(&huart2, buffer, len);
-				HAL_Delay(WAIT_TIME);
+				HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+				//HAL_Delay(WAIT_TIME);
 				last_distance_update = HAL_GetTick();
 				wait = true;
 			}
 		}
-		if (HAL_GetTick() - last_sensors_update > 10) {
+		if (HAL_GetTick() - last_sensors_update > 100 && false) {
 			int16_t deltaX, deltaY;
 			//uint32_t dt = HAL_GetTick() - last_sensors_update;
 			if (PMW_OK == PMW3901_Read_Motion(&deltaX, &deltaY)) {
