@@ -54,13 +54,16 @@ mavlink_message_t msg;
 /*
  * Ping-pong buffers for UART
  */
+/*
 typedef enum _ping_pong_state_t {
 	BUFFER_A,
 	BUFFER_B
 } ping_pong_state_t;
 uint8_t bufferA[UINT8_MAX] = {0};
 uint8_t bufferB[UINT8_MAX] = {0};
-ping_pong_state_t ping_pong_state = BUFFER_A;
+ping_pong_state_t ping_pong_state = BUFFER_A; */
+
+uint8_t mav_buffer[64] = {0};
 
 /*
  * PID is done at main.c but we need to access these variables here
@@ -191,7 +194,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     hdma_usart2_rx.Init.MemInc = DMA_MINC_ENABLE;
     hdma_usart2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
     hdma_usart2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-    hdma_usart2_rx.Init.Mode = DMA_NORMAL;
+    hdma_usart2_rx.Init.Mode = DMA_CIRCULAR;
     hdma_usart2_rx.Init.Priority = DMA_PRIORITY_MEDIUM;
     if (HAL_DMA_Init(&hdma_usart2_rx) != HAL_OK)
     {
@@ -257,6 +260,10 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 } 
 
 /* USER CODE BEGIN 1 */
+void start_mavlink(void) {
+	HAL_UART_Receive_DMA(&huart2, mav_buffer, sizeof(mav_buffer));
+}
+
 void process_buffer(uint8_t *tmp, uint32_t count) {
 	for(uint32_t i = 0; i < count; i++) {
 		if (mavlink_parse_char(0, tmp[i], &msg, &status)) {
@@ -278,23 +285,45 @@ void process_buffer(uint8_t *tmp, uint32_t count) {
 		}
 	}
 }
-
-void handle_mavlink(void) {
+uint32_t last_heartbeat = 0;
+void HAL_UART_RxCpltCallback (UART_HandleTypeDef *huart) {
+	/*
+	 * Process second half of the buffer
+	 */
+	UNUSED(huart);
+	process_buffer(mav_buffer + (sizeof(mav_buffer)/2), sizeof(mav_buffer)/2);
+}
+void HAL_UART_RxHalfCpltCallback (UART_HandleTypeDef *huart) {
+	/*
+	 * Process first half of the buffer
+	 */
+	UNUSED(huart);
+	process_buffer(mav_buffer, sizeof(mav_buffer)/2);
+}
+/*
+ * UNUSED
+ */
+/*
+void handle_mavlink(_Bool BREAK) {*/
 	/*
 	 * Abort current DMA transfer
 	 */
+/*
 	uint16_t rxXferCount = 0;
 	if(huart2.hdmarx != NULL)
 	{
 		DMA_HandleTypeDef *hdma = huart2.hdmarx;
-
+		/*
 		/* Determine how many items of data have been received */
+/*
 		rxXferCount = huart2.RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
 
 		HAL_DMA_Abort(huart2.hdmarx);
 
 		huart2.RxXferCount = 0;
+		*/
 		/* Free USART */
+/*
 		huart2.RxState = HAL_UART_STATE_READY;
 	}
 
@@ -309,7 +338,7 @@ void handle_mavlink(void) {
 		process_buffer(bufferB, rxXferCount);
 		ping_pong_state = BUFFER_A;
 	}
-}
+} */
 
 /* USER CODE END 1 */
 

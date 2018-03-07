@@ -182,6 +182,8 @@ int main(void)
 
 	MPU9250_Init();
 	MPU9250_ReadDataDMA();
+
+	start_mavlink();
 	rate_pitch_PID.KP = 2.0f;
 	rate_roll_PID.KP = 2.0f;
 	rate_yaw_PID.KP = 2.0f;
@@ -211,26 +213,26 @@ int main(void)
 						MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0,
 						MAV_STATE_STANDBY);
 				uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				uint32_t status = HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+				HAL_UART_Transmit_DMA(&huart2, buffer, len);
 				HAL_Delay(WAIT_TIME);
 				last_heartbeat = HAL_GetTick();
 				wait = true;
 			}
 		}
-		if (HAL_GetTick() - last_telemetry_update > 50) {
+		if (HAL_GetTick() - last_telemetry_update > 100) {
 			if(!wait) {
 				uint8_t buffer[255];
 				mavlink_message_t msg;
 				mavlink_msg_vision_position_estimate_pack(1, 100, &msg,
 					HAL_GetTick(), pos_x, pos_y, altitude, r_y, r_x, r_z);
 				uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+				HAL_UART_Transmit_DMA(&huart2, buffer, len);
 				HAL_Delay(WAIT_TIME);
 				last_telemetry_update = HAL_GetTick();
 				wait = true;
 			}
 		}
-		if(HAL_GetTick() - last_distance_update > 50) {
+		if(HAL_GetTick() - last_distance_update > 100) {
 			if(!wait) {
 				uint8_t buffer[255];
 				mavlink_message_t msg;
@@ -238,7 +240,7 @@ int main(void)
 						1500, distance_front, MAV_DISTANCE_SENSOR_LASER, 0,
 						MAV_SENSOR_ROTATION_NONE, 0);
 				uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+				HAL_UART_Transmit_DMA(&huart2, buffer, len);
 				HAL_Delay(WAIT_TIME);
 				last_distance_update = HAL_GetTick();
 				wait = true;
@@ -255,7 +257,7 @@ int main(void)
 			altitude = read_height();
 			last_sensors_update = HAL_GetTick();
 		}
-		if(wait) {
+		/*if(wait) {
 			uint32_t _start = HAL_GetTick();
 			while(HAL_GetTick() - _start < WAIT_TIME) {
 				handle_mavlink();
@@ -263,7 +265,8 @@ int main(void)
 			}
 		} else {
 			handle_mavlink();
-		}
+		}*/
+		//HAL_Delay(WAIT_TIME);
 	}
   /* USER CODE END 3 */
 
