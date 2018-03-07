@@ -193,7 +193,6 @@ int main(void)
 	uint32_t WAIT_TIME = 30;
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
 
-	MAVlink_Start();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -203,37 +202,47 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
+		_Bool wait = false;
 		if (HAL_GetTick() - last_heartbeat > 1000) {
-			uint8_t buffer[255];
-			mavlink_message_t msg;
-			mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR,
-					MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0,
-					MAV_STATE_STANDBY);
-			uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-			uint32_t status = HAL_UART_Transmit(&huart2, buffer, len, 0xff);
-			HAL_Delay(WAIT_TIME);
-			last_heartbeat = HAL_GetTick();
+			if(!wait) {
+				uint8_t buffer[255];
+				mavlink_message_t msg;
+				mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR,
+						MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0,
+						MAV_STATE_STANDBY);
+				uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+				uint32_t status = HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+				HAL_Delay(WAIT_TIME);
+				last_heartbeat = HAL_GetTick();
+				wait = true;
+			}
 		}
 		if (HAL_GetTick() - last_telemetry_update > 50) {
-			uint8_t buffer[255];
-			mavlink_message_t msg;
-			mavlink_msg_vision_position_estimate_pack(1, 100, &msg,
-				HAL_GetTick(), pos_x, pos_y, altitude, r_y, r_x, r_z);
-			uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-			HAL_UART_Transmit(&huart2, buffer, len, 0xff);
-			HAL_Delay(WAIT_TIME);
-			last_telemetry_update = HAL_GetTick();
+			if(!wait) {
+				uint8_t buffer[255];
+				mavlink_message_t msg;
+				mavlink_msg_vision_position_estimate_pack(1, 100, &msg,
+					HAL_GetTick(), pos_x, pos_y, altitude, r_y, r_x, r_z);
+				uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+				HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+				HAL_Delay(WAIT_TIME);
+				last_telemetry_update = HAL_GetTick();
+				wait = true;
+			}
 		}
 		if(HAL_GetTick() - last_distance_update > 50) {
-			uint8_t buffer[255];
-			mavlink_message_t msg;
-			mavlink_msg_distance_sensor_pack(1, 100, &msg, HAL_GetTick(), 30,
-					1500, distance_front, MAV_DISTANCE_SENSOR_LASER, 0,
-					MAV_SENSOR_ROTATION_NONE, 0);
-			uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-			HAL_UART_Transmit(&huart2, buffer, len, 0xff);
-			HAL_Delay(WAIT_TIME);
-			last_distance_update = HAL_GetTick();
+			if(!wait) {
+				uint8_t buffer[255];
+				mavlink_message_t msg;
+				mavlink_msg_distance_sensor_pack(1, 100, &msg, HAL_GetTick(), 30,
+						1500, distance_front, MAV_DISTANCE_SENSOR_LASER, 0,
+						MAV_SENSOR_ROTATION_NONE, 0);
+				uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+				HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+				HAL_Delay(WAIT_TIME);
+				last_distance_update = HAL_GetTick();
+				wait = true;
+			}
 		}
 		if (HAL_GetTick() - last_sensors_update > 10) {
 			int16_t deltaX, deltaY;
@@ -246,7 +255,15 @@ int main(void)
 			altitude = read_height();
 			last_sensors_update = HAL_GetTick();
 		}
-
+		if(wait) {
+			uint32_t _start = HAL_GetTick();
+			while(HAL_GetTick() - _start < WAIT_TIME) {
+				handle_mavlink();
+				HAL_Delay(2);
+			}
+		} else {
+			handle_mavlink();
+		}
 	}
   /* USER CODE END 3 */
 
@@ -303,28 +320,6 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void processMessage(uint8_t *tmp, uint32_t count) {
-	for(uint32_t i = 0; i < count; i++) {
-		if (mavlink_parse_char(0, tmp[i], &msg, &status)) {
-			switch (msg.msgid) {
-			case MAVLINK_MSG_ID_HEARTBEAT: {
-				HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
-				break;
-			}
-			case MAVLINK_MSG_ID_MANUAL_CONTROL: {
-				mavlink_manual_control_t controls;
-				mavlink_msg_manual_control_decode(&msg, &controls);
-				pitch = controls.x;
-				roll = controls.y;
-				throttle = controls.z;
-				yaw = controls.r;
-			}
-			}
-		}
-	}
-	HAL_UART_Receive_DMA(&huart2, buffer, sizeof(buffer));
-}
-
 float update_pid(PID *m_pid, float setpoint, float measurement) {
 	float error = setpoint - measurement;
 
