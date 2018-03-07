@@ -243,60 +243,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 } 
 
 /* USER CODE BEGIN 1 */
-void MAVlink_Start(void) {
-	__HAL_UART_ENABLE_IT(&huart2, UART_IT_IDLE);
-	HAL_UART_Receive_DMA(&huart2, buffer, sizeof(buffer));
-}
-void processMessage(uint8_t *tmp, uint32_t count) {
-	for(uint32_t i = 0; i < count; i++) {
-		if (mavlink_parse_char(0, tmp[i], &msg, &status)) {
-			switch (msg.msgid) {
-			case MAVLINK_MSG_ID_HEARTBEAT: {
-				HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
-				break;
-			}
-			case MAVLINK_MSG_ID_MANUAL_CONTROL: {
-				mavlink_manual_control_t controls;
-				mavlink_msg_manual_control_decode(&msg, &controls);
-				pitch = controls.x;
-				roll = controls.y;
-				throttle = controls.z;
-				yaw = controls.r;
-			}
-			}
-		}
-	}
-	HAL_UART_Receive_DMA(&huart2, buffer, sizeof(buffer));
-}
 
-/**
-  * @brief  UART receive process idle callback for short RX DMA transfers.
-  * @param  huart: Pointer to a UART_HandleTypeDef structure that contains
-  *                the configuration information for the specified UART module.
-  * @retval None
-  */
-
-/*
- * Patches available here https://community.st.com/thread/41068-cubemx-feature-request-add-usart-rx-idle-handling
- */
-void HAL_UART_RxIdleCallback(UART_HandleTypeDef* huart)
-{
-  uint16_t rxXferCount = 0;
-  if(huart->hdmarx != NULL)
-  {
-    DMA_HandleTypeDef *hdma = huart->hdmarx;
-
-    /* Determine how many items of data have been received */
-    rxXferCount = huart->RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
-
-    HAL_DMA_Abort(huart->hdmarx);
-
-    huart->RxXferCount = 0;
-    /* Free USART */
-    huart->RxState = HAL_UART_STATE_READY;
-  }
-  processMessage(huart->pRxBuffPtr, rxXferCount);
-}
 /* USER CODE END 1 */
 
 /**

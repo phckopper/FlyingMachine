@@ -86,7 +86,7 @@ int16_t roll = 0, pitch = 0, yaw = 0, throttle = 0;
   * @retval None
   */
 int main(void)
- {
+{
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -303,6 +303,28 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void processMessage(uint8_t *tmp, uint32_t count) {
+	for(uint32_t i = 0; i < count; i++) {
+		if (mavlink_parse_char(0, tmp[i], &msg, &status)) {
+			switch (msg.msgid) {
+			case MAVLINK_MSG_ID_HEARTBEAT: {
+				HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+				break;
+			}
+			case MAVLINK_MSG_ID_MANUAL_CONTROL: {
+				mavlink_manual_control_t controls;
+				mavlink_msg_manual_control_decode(&msg, &controls);
+				pitch = controls.x;
+				roll = controls.y;
+				throttle = controls.z;
+				yaw = controls.r;
+			}
+			}
+		}
+	}
+	HAL_UART_Receive_DMA(&huart2, buffer, sizeof(buffer));
+}
+
 float update_pid(PID *m_pid, float setpoint, float measurement) {
 	float error = setpoint - measurement;
 
