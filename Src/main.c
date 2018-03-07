@@ -77,11 +77,7 @@ volatile float r_x = 0, r_y = 0, r_z = 0;
 float pos_x = 0, pos_y = 0, pos_z = 0;
 int16_t distance_front = 0, altitude = 0;
 
-volatile uint8_t mav_byte = 0;
-volatile mavlink_status_t status;
-volatile mavlink_message_t msg;
-volatile int16_t roll = 0, pitch = 0, yaw = 0, throttle = 0;
-_Bool new_msg = true;
+int16_t roll = 0, pitch = 0, yaw = 0, throttle = 0;
 /* USER CODE END 0 */
 
 /**
@@ -90,7 +86,7 @@ _Bool new_msg = true;
   * @retval None
   */
 int main(void)
-{
+ {
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -186,7 +182,6 @@ int main(void)
 
 	MPU9250_Init();
 	MPU9250_ReadDataDMA();
-
 	rate_pitch_PID.KP = 2.0f;
 	rate_roll_PID.KP = 2.0f;
 	rate_yaw_PID.KP = 2.0f;
@@ -197,8 +192,8 @@ int main(void)
 	uint32_t last_distance_update = 0;
 	uint32_t WAIT_TIME = 30;
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
-	HAL_UART_Receive_DMA(&huart2, &mav_byte, 1);
-	_Bool wait = false;
+
+	MAVlink_Start();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -215,7 +210,7 @@ int main(void)
 					MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0,
 					MAV_STATE_STANDBY);
 			uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-			HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+			uint32_t status = HAL_UART_Transmit(&huart2, buffer, len, 0xff);
 			HAL_Delay(WAIT_TIME);
 			last_heartbeat = HAL_GetTick();
 		}
@@ -231,6 +226,7 @@ int main(void)
 		}
 		if(HAL_GetTick() - last_distance_update > 50) {
 			uint8_t buffer[255];
+			mavlink_message_t msg;
 			mavlink_msg_distance_sensor_pack(1, 100, &msg, HAL_GetTick(), 30,
 					1500, distance_front, MAV_DISTANCE_SENSOR_LASER, 0,
 					MAV_SENSOR_ROTATION_NONE, 0);
@@ -241,7 +237,7 @@ int main(void)
 		}
 		if (HAL_GetTick() - last_sensors_update > 10) {
 			int16_t deltaX, deltaY;
-			uint32_t dt = HAL_GetTick() - last_sensors_update;
+			//uint32_t dt = HAL_GetTick() - last_sensors_update;
 			if (PMW_OK == PMW3901_Read_Motion(&deltaX, &deltaY)) {
 				pos_x += deltaX;
 				pos_y += deltaY;
@@ -249,23 +245,6 @@ int main(void)
 			distance_front = read_front();
 			altitude = read_height();
 			last_sensors_update = HAL_GetTick();
-		}
-		if (new_msg) {
-			new_msg = false;
-			switch (msg.msgid) {
-			case MAVLINK_MSG_ID_HEARTBEAT: {
-				HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
-				break;
-			}
-			case MAVLINK_MSG_ID_MANUAL_CONTROL: {
-				mavlink_manual_control_t controls;
-				mavlink_msg_manual_control_decode(&msg, &controls);
-				pitch = controls.x;
-				roll = controls.y;
-				throttle = controls.z;
-				yaw = controls.r;
-			}
-			}
 		}
 
 	}
@@ -324,14 +303,6 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
-	char buffer[] = "UART Error\r\n";
-	HAL_UART_Transmit(&huart1, (uint8_t *)buffer, sizeof(buffer), 0xff);
-}
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-	if (mavlink_parse_char(0, mav_byte, &msg, &status))
-		new_msg = true;
-}
 float update_pid(PID *m_pid, float setpoint, float measurement) {
 	float error = setpoint - measurement;
 

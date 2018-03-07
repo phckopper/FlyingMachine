@@ -195,23 +195,23 @@
 /** @addtogroup UART_Private_Functions
   * @{
   */
-static void UART_EndTxTransfer(UART_HandleTypeDef *huart);
-static void UART_EndRxTransfer(UART_HandleTypeDef *huart);
-static void UART_DMATransmitCplt(DMA_HandleTypeDef *hdma);
-static void UART_DMAReceiveCplt(DMA_HandleTypeDef *hdma);
-static void UART_DMATxHalfCplt(DMA_HandleTypeDef *hdma);
-static void UART_DMARxHalfCplt(DMA_HandleTypeDef *hdma);
-static void UART_DMAError(DMA_HandleTypeDef *hdma);
-static void UART_DMAAbortOnError(DMA_HandleTypeDef *hdma);
-static void UART_DMATxAbortCallback(DMA_HandleTypeDef *hdma);
-static void UART_DMARxAbortCallback(DMA_HandleTypeDef *hdma);
-static void UART_DMATxOnlyAbortCallback(DMA_HandleTypeDef *hdma);
-static void UART_DMARxOnlyAbortCallback(DMA_HandleTypeDef *hdma);
-static HAL_StatusTypeDef UART_Transmit_IT(UART_HandleTypeDef *huart);
-static HAL_StatusTypeDef UART_EndTransmit_IT(UART_HandleTypeDef *huart);
-static HAL_StatusTypeDef UART_Receive_IT(UART_HandleTypeDef *huart);
-static HAL_StatusTypeDef UART_WaitOnFlagUntilTimeout(UART_HandleTypeDef *huart, uint32_t Flag, FlagStatus Status, uint32_t Tickstart, uint32_t Timeout);
-static void UART_SetConfig (UART_HandleTypeDef *huart);
+void UART_EndTxTransfer(UART_HandleTypeDef *huart);
+void UART_EndRxTransfer(UART_HandleTypeDef *huart);
+void UART_DMATransmitCplt(DMA_HandleTypeDef *hdma);
+void UART_DMAReceiveCplt(DMA_HandleTypeDef *hdma);
+void UART_DMATxHalfCplt(DMA_HandleTypeDef *hdma);
+void UART_DMARxHalfCplt(DMA_HandleTypeDef *hdma);
+void UART_DMAError(DMA_HandleTypeDef *hdma);
+void UART_DMAAbortOnError(DMA_HandleTypeDef *hdma);
+void UART_DMATxAbortCallback(DMA_HandleTypeDef *hdma);
+void UART_DMARxAbortCallback(DMA_HandleTypeDef *hdma);
+void UART_DMATxOnlyAbortCallback(DMA_HandleTypeDef *hdma);
+void UART_DMARxOnlyAbortCallback(DMA_HandleTypeDef *hdma);
+HAL_StatusTypeDef UART_Transmit_IT(UART_HandleTypeDef *huart);
+HAL_StatusTypeDef UART_EndTransmit_IT(UART_HandleTypeDef *huart);
+HAL_StatusTypeDef UART_Receive_IT(UART_HandleTypeDef *huart);
+HAL_StatusTypeDef UART_WaitOnFlagUntilTimeout(UART_HandleTypeDef *huart, uint32_t Flag, FlagStatus Status, uint32_t Tickstart, uint32_t Timeout);
+void UART_SetConfig (UART_HandleTypeDef *huart);
 /**
   * @}
   */
@@ -1574,14 +1574,17 @@ void HAL_UART_IRQHandler(UART_HandleTypeDef *huart)
 		   UART_Receive_IT(huart);
 		   return;
 		}
-
-		if ((isrflags & USART_SR_IDLE) != RESET)
-		{
-		  /* May also need to read DR to dismiss the IRQ */
-		  HAL_UART_RxIdleCallback(huart);
-		  return;
 	  }
   }
+
+  if ((isrflags & USART_SR_IDLE) != RESET)
+	{
+	  /* May also need to read DR to dismiss the IRQ */
+	  volatile uint8_t tmp = huart->Instance->DR;
+	  (void)tmp;
+	  HAL_UART_RxIdleCallback(huart);
+	  return;
+	}
 
   /* If some errors occur */
   if((errorflags != RESET) && (((cr3its & USART_CR3_EIE) != RESET) || ((cr1its & (USART_CR1_RXNEIE | USART_CR1_PEIE)) != RESET)))
@@ -2049,7 +2052,7 @@ uint32_t HAL_UART_GetError(UART_HandleTypeDef *huart)
   * @param  hdma: DMA handle
   * @retval None
   */
-static void UART_DMATransmitCplt(DMA_HandleTypeDef *hdma)
+void UART_DMATransmitCplt(DMA_HandleTypeDef *hdma)
 {
   UART_HandleTypeDef* huart = ( UART_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
   /* DMA Normal mode*/
@@ -2078,7 +2081,7 @@ static void UART_DMATransmitCplt(DMA_HandleTypeDef *hdma)
   *                the configuration information for the specified DMA module.
   * @retval None
   */
-static void UART_DMATxHalfCplt(DMA_HandleTypeDef *hdma)
+void UART_DMATxHalfCplt(DMA_HandleTypeDef *hdma)
 {
   UART_HandleTypeDef* huart = (UART_HandleTypeDef*)((DMA_HandleTypeDef*)hdma)->Parent;
 
@@ -2090,7 +2093,7 @@ static void UART_DMATxHalfCplt(DMA_HandleTypeDef *hdma)
   * @param  hdma: DMA handle
   * @retval None
   */
-static void UART_DMAReceiveCplt(DMA_HandleTypeDef *hdma)
+void UART_DMAReceiveCplt(DMA_HandleTypeDef *hdma)
 {
   UART_HandleTypeDef* huart = ( UART_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
   /* DMA Normal mode*/
@@ -2118,7 +2121,7 @@ static void UART_DMAReceiveCplt(DMA_HandleTypeDef *hdma)
   *                the configuration information for the specified DMA module.
   * @retval None
   */
-static void UART_DMARxHalfCplt(DMA_HandleTypeDef *hdma)
+void UART_DMARxHalfCplt(DMA_HandleTypeDef *hdma)
 {
   UART_HandleTypeDef* huart = (UART_HandleTypeDef*)((DMA_HandleTypeDef*)hdma)->Parent;
   HAL_UART_RxHalfCpltCallback(huart); 
@@ -2129,7 +2132,7 @@ static void UART_DMARxHalfCplt(DMA_HandleTypeDef *hdma)
   * @param  hdma: DMA handle
   * @retval None
   */
-static void UART_DMAError(DMA_HandleTypeDef *hdma)
+void UART_DMAError(DMA_HandleTypeDef *hdma)
 {
   uint32_t dmarequest = 0x00U;
   UART_HandleTypeDef* huart = ( UART_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
@@ -2164,7 +2167,7 @@ static void UART_DMAError(DMA_HandleTypeDef *hdma)
   * @param  Timeout: Timeout duration
   * @retval HAL status
   */
-static HAL_StatusTypeDef UART_WaitOnFlagUntilTimeout(UART_HandleTypeDef *huart, uint32_t Flag, FlagStatus Status, uint32_t Tickstart, uint32_t Timeout)
+HAL_StatusTypeDef UART_WaitOnFlagUntilTimeout(UART_HandleTypeDef *huart, uint32_t Flag, FlagStatus Status, uint32_t Tickstart, uint32_t Timeout)
 {
   /* Wait until flag is set */
   while((__HAL_UART_GET_FLAG(huart, Flag) ? SET : RESET) == Status) 
@@ -2197,7 +2200,7 @@ static HAL_StatusTypeDef UART_WaitOnFlagUntilTimeout(UART_HandleTypeDef *huart, 
   * @param  huart: UART handle.
   * @retval None
   */
-static void UART_EndTxTransfer(UART_HandleTypeDef *huart)
+void UART_EndTxTransfer(UART_HandleTypeDef *huart)
 {
   /* Disable TXEIE and TCIE interrupts */
   CLEAR_BIT(huart->Instance->CR1, (USART_CR1_TXEIE | USART_CR1_TCIE));
@@ -2211,7 +2214,7 @@ static void UART_EndTxTransfer(UART_HandleTypeDef *huart)
   * @param  huart: UART handle.
   * @retval None
   */
-static void UART_EndRxTransfer(UART_HandleTypeDef *huart)
+void UART_EndRxTransfer(UART_HandleTypeDef *huart)
 {
   /* Disable RXNE, PE and ERR (Frame error, noise error, overrun error) interrupts */
   CLEAR_BIT(huart->Instance->CR1, (USART_CR1_RXNEIE | USART_CR1_PEIE));
@@ -2227,7 +2230,7 @@ static void UART_EndRxTransfer(UART_HandleTypeDef *huart)
   * @param  hdma DMA handle.
   * @retval None
   */
-static void UART_DMAAbortOnError(DMA_HandleTypeDef *hdma)
+void UART_DMAAbortOnError(DMA_HandleTypeDef *hdma)
 {
   UART_HandleTypeDef* huart = ( UART_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
   huart->RxXferCount = 0x00U;
@@ -2244,7 +2247,7 @@ static void UART_DMAAbortOnError(DMA_HandleTypeDef *hdma)
   * @param  hdma DMA handle.
   * @retval None
   */
-static void UART_DMATxAbortCallback(DMA_HandleTypeDef *hdma)
+void UART_DMATxAbortCallback(DMA_HandleTypeDef *hdma)
 {
   UART_HandleTypeDef* huart = ( UART_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
   
@@ -2282,7 +2285,7 @@ static void UART_DMATxAbortCallback(DMA_HandleTypeDef *hdma)
   * @param  hdma DMA handle.
   * @retval None
   */
-static void UART_DMARxAbortCallback(DMA_HandleTypeDef *hdma)
+void UART_DMARxAbortCallback(DMA_HandleTypeDef *hdma)
 {
   UART_HandleTypeDef* huart = ( UART_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
   
@@ -2320,7 +2323,7 @@ static void UART_DMARxAbortCallback(DMA_HandleTypeDef *hdma)
   * @param  hdma DMA handle.
   * @retval None
   */
-static void UART_DMATxOnlyAbortCallback(DMA_HandleTypeDef *hdma)
+void UART_DMATxOnlyAbortCallback(DMA_HandleTypeDef *hdma)
 {
   UART_HandleTypeDef* huart = ( UART_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
 
@@ -2341,7 +2344,7 @@ static void UART_DMATxOnlyAbortCallback(DMA_HandleTypeDef *hdma)
   * @param  hdma DMA handle.
   * @retval None
   */
-static void UART_DMARxOnlyAbortCallback(DMA_HandleTypeDef *hdma)
+void UART_DMARxOnlyAbortCallback(DMA_HandleTypeDef *hdma)
 {
   UART_HandleTypeDef* huart = ( UART_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
 
@@ -2360,7 +2363,7 @@ static void UART_DMARxOnlyAbortCallback(DMA_HandleTypeDef *hdma)
   *                the configuration information for the specified UART module.
   * @retval HAL status
   */
-static HAL_StatusTypeDef UART_Transmit_IT(UART_HandleTypeDef *huart)
+HAL_StatusTypeDef UART_Transmit_IT(UART_HandleTypeDef *huart)
 {
   uint16_t* tmp;
   
@@ -2407,7 +2410,7 @@ static HAL_StatusTypeDef UART_Transmit_IT(UART_HandleTypeDef *huart)
   *                the configuration information for the specified UART module.
   * @retval HAL status
   */
-static HAL_StatusTypeDef UART_EndTransmit_IT(UART_HandleTypeDef *huart)
+HAL_StatusTypeDef UART_EndTransmit_IT(UART_HandleTypeDef *huart)
 {
   /* Disable the UART Transmit Complete Interrupt */    
   __HAL_UART_DISABLE_IT(huart, UART_IT_TC);
@@ -2425,7 +2428,7 @@ static HAL_StatusTypeDef UART_EndTransmit_IT(UART_HandleTypeDef *huart)
   *                the configuration information for the specified UART module.
   * @retval HAL status
   */
-static HAL_StatusTypeDef UART_Receive_IT(UART_HandleTypeDef *huart)
+HAL_StatusTypeDef UART_Receive_IT(UART_HandleTypeDef *huart)
 {
   uint16_t* tmp;
   
@@ -2489,7 +2492,7 @@ static HAL_StatusTypeDef UART_Receive_IT(UART_HandleTypeDef *huart)
   *                the configuration information for the specified UART module.
   * @retval None
   */
-static void UART_SetConfig(UART_HandleTypeDef *huart)
+void UART_SetConfig(UART_HandleTypeDef *huart)
 {
   uint32_t tmpreg = 0x00U;
 
