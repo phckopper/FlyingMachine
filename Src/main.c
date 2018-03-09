@@ -77,7 +77,12 @@ volatile float r_x = 0, r_y = 0, r_z = 0;
 float pos_x = 0, pos_y = 0, pos_z = 0;
 int16_t distance_front = 0, altitude = 0;
 
+/*
+ * RC Commands
+ */
 int16_t roll = 0, pitch = 0, yaw = 0, throttle = 0;
+_Bool enabled = false;
+
 /* USER CODE END 0 */
 
 /**
@@ -192,8 +197,8 @@ int main(void)
 	uint32_t last_sensors_update = 0;
 	uint32_t last_telemetry_update = 0;
 	uint32_t last_distance_update = 0;
-	uint32_t WAIT_TIME = 30;
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+	HAL_Delay(500);
 
   /* USER CODE END 2 */
 
@@ -207,46 +212,52 @@ int main(void)
 		_Bool wait = false;
 		if (HAL_GetTick() - last_heartbeat > 1000 && __HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
 			if(!wait) {
-				uint8_t buffer[255];
+				uint8_t buffer[64] = {0};
 				mavlink_message_t msg;
 				mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR,
 						MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0,
 						MAV_STATE_STANDBY);
 				uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				HAL_UART_Transmit(&huart2, buffer, len, 0xff);
-				//HAL_Delay(WAIT_TIME);
-				last_heartbeat = HAL_GetTick();
-				wait = true;
+				if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
+					__HAL_UART_CLEAR_IDLEFLAG(&huart2);
+					HAL_UART_Transmit(&huart2, buffer, sizeof(buffer), 0xff);
+					last_heartbeat = HAL_GetTick();
+					wait = true;
+				}
 			}
 		}
 		if (HAL_GetTick() - last_telemetry_update > 100 && __HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
 			if(!wait) {
-				uint8_t buffer[255];
+				uint8_t buffer[64] = {0};
 				mavlink_message_t msg;
 				mavlink_msg_vision_position_estimate_pack(1, 100, &msg,
 					HAL_GetTick(), pos_x, pos_y, altitude, r_y, r_x, r_z);
 				uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				HAL_UART_Transmit(&huart2, buffer, len, 0xff);
-				//HAL_Delay(WAIT_TIME);
-				last_telemetry_update = HAL_GetTick();
-				wait = true;
+				if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
+					__HAL_UART_CLEAR_IDLEFLAG(&huart2);
+					HAL_UART_Transmit(&huart2, buffer, sizeof(buffer), 0xff);
+					last_telemetry_update = HAL_GetTick();
+					wait = true;
+				}
 			}
 		}
 		if(HAL_GetTick() - last_distance_update > 100 && __HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
 			if(!wait) {
-				uint8_t buffer[255];
+				uint8_t buffer[64] = {0};
 				mavlink_message_t msg;
 				mavlink_msg_distance_sensor_pack(1, 100, &msg, HAL_GetTick(), 30,
 						1500, distance_front, MAV_DISTANCE_SENSOR_LASER, 0,
 						MAV_SENSOR_ROTATION_NONE, 0);
 				uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				HAL_UART_Transmit(&huart2, buffer, len, 0xff);
-				//HAL_Delay(WAIT_TIME);
-				last_distance_update = HAL_GetTick();
-				wait = true;
+				if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
+					__HAL_UART_CLEAR_IDLEFLAG(&huart2);
+					HAL_UART_Transmit(&huart2, buffer, sizeof(buffer), 0xff);
+					last_distance_update = HAL_GetTick();
+					wait = true;
+				}
 			}
 		}
-		if (HAL_GetTick() - last_sensors_update > 100 && false) {
+		if (HAL_GetTick() - last_sensors_update > 10) {
 			int16_t deltaX, deltaY;
 			//uint32_t dt = HAL_GetTick() - last_sensors_update;
 			if (PMW_OK == PMW3901_Read_Motion(&deltaX, &deltaY)) {
@@ -265,8 +276,13 @@ int main(void)
 			}
 		} else {
 			handle_mavlink();
+		}*//*
+		if(__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
+			__HAL_UART_CLEAR_IDLEFLAG(&huart2);
+			HAL_GPIO_WritePin(STATUS_GPIO_Port, STATUS_Pin, SET);
+		} else if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_RXNE)){
+			HAL_GPIO_WritePin(STATUS_GPIO_Port, STATUS_Pin, RESET);
 		}*/
-		//HAL_Delay(WAIT_TIME);
 	}
   /* USER CODE END 3 */
 
@@ -379,10 +395,18 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		m3_out = constrain(m3_out, 0, htim1.Instance->ARR);
 		m4_out = constrain(m4_out, 0, htim1.Instance->ARR);
 
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, m1_out);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, m2_out);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, m3_out);
-		__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, m4_out);
+		if(enabled) {
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, m1_out);
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, m2_out);
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, m3_out);
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, m4_out);
+		} else {
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0);
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0);
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0);
+			__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, 0);
+		}
+
 
 		DBG_A_GPIO_Port->ODR &= ~DBG_A_Pin;
 	}

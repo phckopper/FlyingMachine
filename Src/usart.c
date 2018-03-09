@@ -69,6 +69,7 @@ uint8_t mav_buffer[64] = {0};
  * PID is done at main.c but we need to access these variables here
  */
 extern int16_t roll, pitch, yaw, throttle;
+extern _Bool enabled;
 
 /* USER CODE END 0 */
 
@@ -279,6 +280,7 @@ void process_buffer(uint8_t *tmp, uint32_t count) {
 				roll = controls.y;
 				throttle = controls.z;
 				yaw = controls.r;
+				enabled = controls.buttons ? 1 : 0;
 				break;
 			}
 			}
