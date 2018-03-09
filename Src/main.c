@@ -136,7 +136,7 @@ int main(void)
 	HAL_UART_Transmit(&huart1, response1, strlen(response1), 0xff);
 	HAL_Delay(1000);
 
-	char cmd2[] = "ATS05=75\r";
+	char cmd2[] = "ATS00=460800\r";
 	char response2[255] = {0};
 	HAL_UART_Transmit(&huart2, cmd2, strlen(cmd2), 0xff);
 	HAL_UART_Receive(&huart2, response2, sizeof(response2), 0xff);
@@ -151,7 +151,7 @@ int main(void)
 	HAL_Delay(1000);
 
 	char cmd4[] = "AT/S\r";
-	char response4[255] = {0};
+	char response4[1024] = {0};
 	HAL_UART_Transmit(&huart2, cmd4, strlen(cmd4), 0xff);
 	HAL_UART_Receive(&huart2, response4, sizeof(response4), 0xff);
 	HAL_UART_Transmit(&huart1, response4, strlen(response4), 0xff);
@@ -162,8 +162,8 @@ int main(void)
 	HAL_UART_Transmit(&huart2, cmd3, strlen(cmd3), 0xff);
 	HAL_UART_Receive(&huart2, response3, sizeof(response3), 0xff);
 	HAL_UART_Transmit(&huart1, response3, strlen(response3), 0xff);
-
-
+	*/
+	/*
 	HAL_Delay(1000);
 	while(1) {
 		char buffer[64] = {0};
