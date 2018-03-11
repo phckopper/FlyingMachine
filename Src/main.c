@@ -196,15 +196,24 @@ int main(void)
 	MPU9250_ReadDataDMA();
 
 	start_mavlink();
-	rate_pitch_PID.KP = 2.0f;
-	rate_roll_PID.KP = 2.0f;
+
+	/*
+	 * Define PID banks
+	 */
+	rate_pitch_PID.KP = 1.0f;
+	rate_roll_PID.KP = 1.0f;
 	rate_yaw_PID.KP = 2.0f;
 
-	rate_pitch_PID.KI = 0.25f;
-	rate_roll_PID.KI = 0.25f;
+	//rate_pitch_PID.KI = 0.25f;
+	//rate_roll_PID.KI = 0.25f;
 
-	rate_pitch_PID.KD = 0.25f;
-	rate_roll_PID.KD = 0.25f;
+	//rate_pitch_PID.KD = 0.25f;
+	//rate_roll_PID.KD = 0.25f;
+
+	angle_pitch_PID.KP = 3.0f;
+	angle_roll_PID.KP = 3.0f;
+	angle_pitch_PID.KI = 0.005f;
+	angle_roll_PID.KI = 0.005f;
 
 	uint32_t last_heartbeat = 0;
 	uint32_t last_sensors_update = 0;
@@ -263,21 +272,6 @@ int main(void)
 			altitude = read_height();
 			last_sensors_update = HAL_GetTick();
 		}
-		/*if(wait) {
-			uint32_t _start = HAL_GetTick();
-			while(HAL_GetTick() - _start < WAIT_TIME) {
-				handle_mavlink();
-				HAL_Delay(2);
-			}
-		} else {
-			handle_mavlink();
-		}*//*
-		if(__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
-			__HAL_UART_CLEAR_IDLEFLAG(&huart2);
-			HAL_GPIO_WritePin(STATUS_GPIO_Port, STATUS_Pin, SET);
-		} else if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_RXNE)){
-			HAL_GPIO_WritePin(STATUS_GPIO_Port, STATUS_Pin, RESET);
-		}*/
 	}
   /* USER CODE END 3 */
 
@@ -376,8 +370,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 		r_x = r_x * 0.9f + ax * 0.1f;
 		r_y = r_y * 0.9f + ay * 0.1f;
 
-		float error_pitch = update_pid(&rate_pitch_PID, pitch, MPU9250.gyro.x);
-		float error_roll = update_pid(&rate_roll_PID, roll, MPU9250.gyro.y);
+		float a_error_pitch = update_pid(&angle_pitch_PID, pitch, r_x);
+		float a_error_roll = update_pid(&angle_roll_PID, roll, -r_y);
+
+		float error_pitch = update_pid(&rate_pitch_PID, a_error_pitch, MPU9250.gyro.x);
+		float error_roll = update_pid(&rate_roll_PID, a_error_roll, MPU9250.gyro.y);
 		float error_yaw = update_pid(&rate_yaw_PID, yaw, MPU9250.gyro.z);
 
 		float m1_out = throttle - error_pitch - error_roll + error_yaw;

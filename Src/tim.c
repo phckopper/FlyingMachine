@@ -369,8 +369,8 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 	}
 
 	throttle = map(channels[0], PPM_MIN, PPM_MAX, 0, 1000);
-	roll = map(channels[1], PPM_MIN, PPM_MAX, -500, 500);
-	pitch = map(channels[2], PPM_MIN, PPM_MAX, -500, 500);
+	roll = map(channels[1], PPM_MIN, PPM_MAX, -30, 30);
+	pitch = map(channels[2], PPM_MIN, PPM_MAX, -30, 30);
 	yaw = map(channels[3], PPM_MIN, PPM_MAX, -500, 500);
 	enabled = ((channels[4] > 1750) ? 1 : 0) && (channels[5] > 1000);
 

@@ -106,7 +106,7 @@ PMW_Return_Code PMW3901_Read_Motion(int16_t *deltaX, int16_t *deltaY) {
 	uint8_t deltaXH = _read_byte(0x04);
 	uint8_t deltaYL = _read_byte(0x05);
 	uint8_t deltaYH = _read_byte(0x06);
-	if(_read_byte(0x07) < 0x19 || _read_byte(0x0c) == 0x1F) {
+	if(/*_read_byte(0x07) < 0x19 ||*/ _read_byte(0x0c) == 0x1F) {
 		*deltaX = 0;
 		*deltaY = 0;
 		return PMW_OK;
