@@ -78,7 +78,7 @@ uint8_t MPU9250_Init(void) {
 }
 
 void MPU9250_ReadDataDMA(void) {
-	DBG_B_GPIO_Port->ODR ^= DBG_B_Pin;
+	//DBG_B_GPIO_Port->ODR ^= DBG_B_Pin;
 	uint8_t reg = ACCEL_OUT | 0x80;
 
 	HAL_GPIO_WritePin(MPU_CS_GPIO_Port, MPU_CS_Pin, GPIO_PIN_RESET);
@@ -126,6 +126,7 @@ uint8_t MPU9250_CheckConnection(void) {
 }
 
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef * hspi) {
+	UNUSED(hspi);
 	HAL_GPIO_WritePin(MPU_CS_GPIO_Port, MPU_CS_Pin, GPIO_PIN_SET);
 
 	int16_t ax = (((int16_t)buffer[0]) << 8) | buffer[1];

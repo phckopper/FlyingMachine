@@ -53,8 +53,6 @@
 #define MPU_CS_GPIO_Port GPIOA
 #define DBG_A_Pin GPIO_PIN_0
 #define DBG_A_GPIO_Port GPIOB
-#define DBG_B_Pin GPIO_PIN_1
-#define DBG_B_GPIO_Port GPIOB
 #define S1_SHUT_Pin GPIO_PIN_2
 #define S1_SHUT_GPIO_Port GPIOB
 #define PMW_CS_Pin GPIO_PIN_12

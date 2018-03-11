@@ -51,25 +51,12 @@ uint8_t mav_byte = 0;
 mavlink_status_t status;
 mavlink_message_t msg;
 
-/*
- * Ping-pong buffers for UART
- */
-/*
-typedef enum _ping_pong_state_t {
-	BUFFER_A,
-	BUFFER_B
-} ping_pong_state_t;
-uint8_t bufferA[UINT8_MAX] = {0};
-uint8_t bufferB[UINT8_MAX] = {0};
-ping_pong_state_t ping_pong_state = BUFFER_A; */
 
 uint8_t mav_buffer[64] = {0};
 
 /*
  * PID is done at main.c but we need to access these variables here
  */
-extern int16_t roll, pitch, yaw, throttle;
-extern _Bool enabled;
 
 /* USER CODE END 0 */
 
@@ -103,7 +90,7 @@ void MX_USART2_UART_Init(void)
 {
 
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 460800;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -273,16 +260,6 @@ void process_buffer(uint8_t *tmp, uint32_t count) {
 				HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
 				break;
 			}
-			case MAVLINK_MSG_ID_MANUAL_CONTROL: {
-				mavlink_manual_control_t controls;
-				mavlink_msg_manual_control_decode(&msg, &controls);
-				pitch = controls.x;
-				roll = controls.y;
-				throttle = controls.z;
-				yaw = controls.r;
-				enabled = controls.buttons ? 1 : 0;
-				break;
-			}
 			}
 		}
 	}
@@ -302,45 +279,6 @@ void HAL_UART_RxHalfCpltCallback (UART_HandleTypeDef *huart) {
 	UNUSED(huart);
 	process_buffer(mav_buffer, sizeof(mav_buffer)/2);
 }
-/*
- * UNUSED
- */
-/*
-void handle_mavlink(_Bool BREAK) {*/
-	/*
-	 * Abort current DMA transfer
-	 */
-/*
-	uint16_t rxXferCount = 0;
-	if(huart2.hdmarx != NULL)
-	{
-		DMA_HandleTypeDef *hdma = huart2.hdmarx;
-		/*
-		/* Determine how many items of data have been received */
-/*
-		rxXferCount = huart2.RxXferSize - __HAL_DMA_GET_COUNTER(hdma);
-
-		HAL_DMA_Abort(huart2.hdmarx);
-
-		huart2.RxXferCount = 0;
-		*/
-		/* Free USART */
-/*
-		huart2.RxState = HAL_UART_STATE_READY;
-	}
-
-	if(ping_pong_state == BUFFER_A) {
-		// Enable other buffer
-		HAL_UART_Receive_DMA(&huart2, bufferB, sizeof(bufferB));
-		process_buffer(bufferA, rxXferCount);
-		ping_pong_state = BUFFER_B;
-
-	} else if(ping_pong_state == BUFFER_B) {
-		HAL_UART_Receive_DMA(&huart2, bufferA, sizeof(bufferA));
-		process_buffer(bufferB, rxXferCount);
-		ping_pong_state = BUFFER_A;
-	}
-} */
 
 /* USER CODE END 1 */
 

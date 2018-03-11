@@ -122,12 +122,16 @@ int main(void)
   MX_I2C2_Init();
   MX_TIM4_Init();
   MX_SPI2_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
 	/*
+	uint8_t bla[] = "started...\r\n";
+	HAL_UART_Transmit(&huart1, bla, strlen(bla), 0xff);
+
 	HAL_Delay(1000);
 	char cmd1[] = "+++\r";
 	char response1[2] = {0};
@@ -136,7 +140,8 @@ int main(void)
 	HAL_UART_Transmit(&huart1, response1, strlen(response1), 0xff);
 	HAL_Delay(1000);
 
-	char cmd2[] = "ATS00=460800\r";
+
+	char cmd2[] = "ATS24=1\r";
 	char response2[255] = {0};
 	HAL_UART_Transmit(&huart2, cmd2, strlen(cmd2), 0xff);
 	HAL_UART_Receive(&huart2, response2, sizeof(response2), 0xff);
@@ -162,7 +167,9 @@ int main(void)
 	HAL_UART_Transmit(&huart2, cmd3, strlen(cmd3), 0xff);
 	HAL_UART_Receive(&huart2, response3, sizeof(response3), 0xff);
 	HAL_UART_Transmit(&huart1, response3, strlen(response3), 0xff);
-	*/
+
+	uint8_t bla2[] = "finished.\r\n";
+	HAL_UART_Transmit(&huart1, bla2, strlen(bla2), 0xff);*/
 	/*
 	HAL_Delay(1000);
 	while(1) {
@@ -189,15 +196,22 @@ int main(void)
 	MPU9250_ReadDataDMA();
 
 	start_mavlink();
-	rate_pitch_PID.KP = 3.0f;
-	rate_roll_PID.KP = 3.0f;
-	rate_yaw_PID.KP = 1.0f;
+	rate_pitch_PID.KP = 2.0f;
+	rate_roll_PID.KP = 2.0f;
+	rate_yaw_PID.KP = 2.0f;
+
+	rate_pitch_PID.KI = 0.25f;
+	rate_roll_PID.KI = 0.25f;
+
+	rate_pitch_PID.KD = 0.25f;
+	rate_roll_PID.KD = 0.25f;
 
 	uint32_t last_heartbeat = 0;
 	uint32_t last_sensors_update = 0;
 	uint32_t last_telemetry_update = 0;
 	uint32_t last_distance_update = 0;
 	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+	HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_4);
 	HAL_Delay(500);
 
   /* USER CODE END 2 */
@@ -209,53 +223,34 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-		_Bool wait = false;
 		if (HAL_GetTick() - last_heartbeat > 1000 && __HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
-			if(!wait) {
-				uint8_t buffer[64] = {0};
-				mavlink_message_t msg;
-				mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR,
-						MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0,
-						MAV_STATE_STANDBY);
-				uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
-					__HAL_UART_CLEAR_IDLEFLAG(&huart2);
-					HAL_UART_Transmit(&huart2, buffer, sizeof(buffer), 0xff);
-					last_heartbeat = HAL_GetTick();
-					wait = true;
-				}
-			}
+			uint8_t buffer[64] = {0};
+			mavlink_message_t msg;
+			mavlink_msg_heartbeat_pack(1, 100, &msg, MAV_TYPE_QUADROTOR,
+					MAV_AUTOPILOT_GENERIC, MAV_MODE_FLAG_SAFETY_ARMED, 0,
+					MAV_STATE_STANDBY);
+			uint8_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+			HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+			last_heartbeat = HAL_GetTick();
 		}
-		if (HAL_GetTick() - last_telemetry_update > 100 && __HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
-			if(!wait) {
-				uint8_t buffer[64] = {0};
-				mavlink_message_t msg;
-				mavlink_msg_vision_position_estimate_pack(1, 100, &msg,
-					HAL_GetTick(), pos_x, pos_y, altitude, r_y, r_x, r_z);
-				uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
-					__HAL_UART_CLEAR_IDLEFLAG(&huart2);
-					HAL_UART_Transmit(&huart2, buffer, sizeof(buffer), 0xff);
-					last_telemetry_update = HAL_GetTick();
-					wait = true;
-				}
-			}
+		if (HAL_GetTick() - last_telemetry_update > 100) {
+			uint8_t buffer[64] = {0};
+			mavlink_message_t msg;
+			mavlink_msg_vision_position_estimate_pack(1, 100, &msg,
+				HAL_GetTick(), pos_x, pos_y, altitude, r_y, r_x, r_z);
+			uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+			HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+			last_telemetry_update = HAL_GetTick();
 		}
 		if(HAL_GetTick() - last_distance_update > 100 && __HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
-			if(!wait) {
-				uint8_t buffer[64] = {0};
-				mavlink_message_t msg;
-				mavlink_msg_distance_sensor_pack(1, 100, &msg, HAL_GetTick(), 30,
-						1500, distance_front, MAV_DISTANCE_SENSOR_LASER, 0,
-						MAV_SENSOR_ROTATION_NONE, 0);
-				uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
-				if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_IDLE)) {
-					__HAL_UART_CLEAR_IDLEFLAG(&huart2);
-					HAL_UART_Transmit(&huart2, buffer, sizeof(buffer), 0xff);
-					last_distance_update = HAL_GetTick();
-					wait = true;
-				}
-			}
+			uint8_t buffer[64] = {0};
+			mavlink_message_t msg;
+			mavlink_msg_distance_sensor_pack(1, 100, &msg, HAL_GetTick(), 30,
+					1500, distance_front, MAV_DISTANCE_SENSOR_LASER, 0,
+					MAV_SENSOR_ROTATION_NONE, 0);
+			uint16_t len = mavlink_msg_to_send_buffer(buffer, &msg);
+			HAL_UART_Transmit(&huart2, buffer, len, 0xff);
+			last_distance_update = HAL_GetTick();
 		}
 		if (HAL_GetTick() - last_sensors_update > 10) {
 			int16_t deltaX, deltaY;
